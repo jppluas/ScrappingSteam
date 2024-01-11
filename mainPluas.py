@@ -157,4 +157,14 @@ for i in range(len(nombresJuegos)):
 
 print(juegosPopulares)
 
+#Guardar datos obtenidos en csv
+ruta_archivo_csv = 'datosPluas.csv'
+with open(ruta_archivo_csv, 'w', newline='', encoding='utf-8') as archivo_csv:
+  escritor_csv = csv.writer(archivo_csv, delimiter=';')
+
+  escritor_csv.writerow(['Nombre de juego', 'ID', 'Jugadores pico diarios', 'Precio en $', 'Jugabilidad', 'Categorías'])
+
+  # Escribe los datos de las listas paralelas
+  for datos in zip(nombresJuegos, ids, jugadoresPico, preciosPopulares, esMultijugador, categoriasPopulares):
+    escritor_csv.writerow(datos)
 
