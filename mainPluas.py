@@ -1,0 +1,160 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+#Scrapping Pluas
+linkPopulares='https://steamcharts.com/top'
+preciosPopulares=[]
+caracteristicasPopulares=[]
+esMultijugador=[]
+categoriasPopulares=[]
+
+def scrapGlobal_text(url, hasMany, label, hasClass, labelClass):
+  htmlElement=''
+  htmlElements=[]
+  elements=[]
+  response = requests.get(url)
+  if response.status_code == 200:
+    html = BeautifulSoup(response.text, 'html.parser')
+    if hasMany:
+      if hasClass:
+        htmlElements = html.find_all(label, class_=labelClass)
+      else:
+        htmlElements = html.find_all(label)
+      for htmlElement in htmlElements:
+        elements.append(htmlElement.text.strip())
+        #print(htmlElement.text.strip())
+    else:
+      if hasClass:
+        htmlElement = html.find(label, class_=labelClass)
+        #print (htmlElement.text.strip())
+        return htmlElement.text.strip()
+      else:
+        htmlElement = html.find(label)
+        #print (htmlElement.text.strip())
+        return htmlElement.text.strip()
+
+  else:
+    print('Error al acceder a la página:', response.status_code)
+  return elements
+
+
+def scrapSpecific_text(url, hasMany, container, containerClass, label, hasClass, labelClass):
+  htmlElements=[]
+  elements=[]
+  response = requests.get(url)
+  if response.status_code == 200:
+    html = BeautifulSoup(response.text, 'html.parser')
+    htmlContainer = html.find(container, class_=containerClass)
+    if htmlContainer:
+      if hasMany:
+        if hasClass:
+          htmlElements = htmlContainer.find_all(label, class_=labelClass)
+        else:
+          htmlElements = htmlContainer.find_all(label)
+        for htmlElement in htmlElements:
+          elements.append(htmlElement.text.strip())
+          #print(htmlElement.text.strip())
+      else:
+        if hasClass:
+          htmlElement = htmlContainer.find(label, class_= labelClass)
+          #print (htmlElement.text.strip())
+          return htmlElement.text.strip()
+        else:
+          htmlElement = htmlContainer.find(label)
+          #print (htmlElement.text.strip())
+          return htmlElement.text.strip()
+
+    else:
+      print(
+          f"No se encontró el contenedor con la clase {containerClass} en la página.")
+  else:
+    print('Error al acceder a la página:', response.status_code)
+  return elements
+
+
+def srapSpecific_links(url, hasMany, container, containerClass, label, hasClass, labelClass):
+  htmlElements=[]
+  links = []
+  response = requests.get(url)
+  if response.status_code == 200:
+      html = BeautifulSoup(response.text, 'html.parser')
+      htmlContainer = html.find(container, class_=containerClass)
+      if htmlContainer:
+          if hasMany:
+            if hasClass:
+                htmlElements = htmlContainer.find_all(label, class_=labelClass)
+            else:
+                htmlElements = htmlContainer.find_all(label)
+            for htmlElement in htmlElements:
+                link = htmlElement.get('href')
+                if link:
+                    links.append(link)
+                    #print(link)
+                else:
+                    print('La etiqueta no tiene atributo href.')  
+          else:
+            if hasClass:
+              htmlElement = htmlContainer.find(label, class_=labelClass)
+              return htmlElement.get('href')
+            else:
+              htmlElement = htmlContainer.find(label)
+              return htmlElement.get('href')
+
+      else:
+          print(f"No se encontró el contenedor con la clase {containerClass} en la página.")
+  else:
+      print('Error al acceder a la página:', response.status_code)
+  return links
+
+
+
+
+nombresJuegos=scrapSpecific_text(linkPopulares,True, 'table','common-table','a', False, 'x')
+jugadoresPico=scrapGlobal_text(linkPopulares,True,'td',True, 'peak-concurrent')
+ids=srapSpecific_links(linkPopulares, True, 'table','common-table','a', False, 'x')
+
+
+
+for juego in nombresJuegos:
+  nombre_format= juego.lower().replace(":", "").replace(" ", "+")
+  url='https://gg.deals/games/?title='+nombre_format
+  precio=scrapSpecific_text(url, False, 'span','lowest-recorded','span',True,'price-inner')
+  if precio == 'Free':
+    precio = 0
+  else:
+    precio = float(precio.replace('$', '').replace('~', ''))
+  preciosPopulares.append(precio)
+
+for id in ids:
+  carac=''
+  url='https://store.steampowered.com/app/'+id.split('/')[-1]
+  caracteristicas=scrapGlobal_text(url, True,'div', True, 'label')
+  categorias=scrapGlobal_text(url, True,'a', True, 'app_tag')
+
+  categoriasPopulares.append(categorias)
+  for caracteristica in caracteristicas:  
+    #print(caracteristica)
+    carac=carac+' '+caracteristica
+  #print(carac)
+  if ('Online' in carac) or ('Multiplayer' in carac) or ('Anti-Cheat' in carac):
+    esMultijugador.append('Multijugador')
+  else:
+    esMultijugador.append('No multijugador')
+
+juegosPopulares={}
+
+#Guardar y mostrar diccionario de datos 
+for i in range(len(nombresJuegos)):
+  if nombresJuegos[i] not in juegosPopulares:
+    juegosPopulares[nombresJuegos[i]] = []
+  juegosPopulares[nombresJuegos[i]].append(ids[i].split('/')[-1])
+  juegosPopulares[nombresJuegos[i]].append(jugadoresPico[i])
+  juegosPopulares[nombresJuegos[i]].append(preciosPopulares[i])
+  juegosPopulares[nombresJuegos[i]].append(esMultijugador[i])
+  juegosPopulares[nombresJuegos[i]].append(categoriasPopulares[i])
+
+
+print(juegosPopulares)
+
+
