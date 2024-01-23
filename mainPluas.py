@@ -1,3 +1,4 @@
+#TIEMPO DE EJECUCION DE SCRAPPING 1:30 MIN
 import requests
 from bs4 import BeautifulSoup
 import csv
@@ -7,31 +8,6 @@ preciosPopulares = []
 caracteristicasPopulares = []
 esMultijugador = []
 categoriasPopulares = []
-
-
-def agecheckpass():
-  url = 'https://store.steampowered.com/agecheck/app/271590/'
-  response = requests.get(url)
-  html = BeautifulSoup(response.text, 'html.parser')
-
-  form_data = {}
-  for select in html.find_all('select'):
-    select_name = select.get('name')
-    if select_name:
-      form_data[select_name] = select.find('option')['value']
-  form_data['ageDay'] = '1'
-  form_data['ageMonth'] = 'January'
-  form_data['ageYear'] = '1980'
-
-  response = requests.post(url, data=form_data)
-  if response.status_code == 200:
-    print('Formulario enviado con éxito!')
-    return True
-  else:
-    print('Error al enviar el formulario:', response.status_code)
-    print('Contenido de la respuesta:', response.text)
-    return False
-
 
 def scrapGlobal_text(url, hasMany, label, hasClass, labelClass):
   htmlElement = ''
@@ -185,16 +161,50 @@ for i in range(len(nombresJuegos)):
 
 print(juegosPopulares)
 
-ruta_archivo_csv = 'datosPluas.csv'
-with open(ruta_archivo_csv, 'w', newline='', encoding='utf-8') as archivo_csv:
-  escritor_csv = csv.writer(archivo_csv, delimiter=';')
+num_juegos_por_categoria = {}
+num_juegos_multijugador = 0
+num_juegos_no_multijugador = 0
+num_juegos_gratis = 0
+num_juegos_no_gratis = 0
 
-  escritor_csv.writerow([
-      'Nombre de juego', 'ID', 'Jugadores pico diarios', 'Precio en $',
-      'Jugabilidad', 'Categorías'
-  ])
+for juego, detalles in juegosPopulares.items():
+    categoria = detalles[4]  
 
-  # Escribe los datos de las listas paralelas
-  for datos in zip(nombresJuegos, ids, jugadoresPico, preciosPopulares,
-    esMultijugador, categoriasPopulares):
-      escritor_csv.writerow(datos)
+    if categoria in num_juegos_por_categoria:
+        num_juegos_por_categoria[categoria] += 1
+    else:
+        num_juegos_por_categoria[categoria] = 1
+
+    if detalles[3] == 'Multijugador':
+        num_juegos_multijugador += 1
+    else:
+        num_juegos_no_multijugador += 1
+
+    if detalles[2] == 0.0:
+        num_juegos_gratis += 1
+    else:
+        num_juegos_no_gratis += 1
+
+with open('categorias.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Categoría', 'Número de Juegos'])
+    for categoria, cantidad in num_juegos_por_categoria.items():
+        writer.writerow([categoria, cantidad])
+
+with open('multijugador.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Tipo', 'Número de Juegos'])
+    writer.writerow(['Multijugador', num_juegos_multijugador])
+    writer.writerow(['No Multijugador', num_juegos_no_multijugador])
+
+with open('precio.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Tipo', 'Número de Juegos'])
+    writer.writerow(['Gratis', num_juegos_gratis])
+    writer.writerow(['No Gratis', num_juegos_no_gratis])
+
+with open('juegosPopulares.txt', 'w', newline='') as txtfile:
+  txtfile.write("juegosPopulares = {\n")
+  for juego, detalles in juegosPopulares.items():
+      txtfile.write(f"    '{juego}': {detalles},\n")
+  txtfile.write("}\n")
